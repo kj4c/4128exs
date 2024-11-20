@@ -1,0 +1,87 @@
+#include <iostream>
+#include <vector>
+using namespace std;
+ 
+typedef long long ll;
+
+ll n;
+
+struct edge {
+    ll u;
+    ll v;
+    ll w;
+};
+
+vector<vector<ll>> dist;
+vector<ll> deletions;
+vector<ll> vals;
+void printDist() {
+    for (ll i = 0; i < n; i++) {
+        for (ll j = 0; j < n; j++) {
+            cout << dist[i][j] << " ";
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+void floyd() {
+    vector<bool> included(n, false);
+    for (ll i = n - 1; i >= 0; i--) {
+        
+        ll k = deletions[i];
+        included[k] = true;
+
+        for (ll u = 0; u < n; u++) {
+            for (ll v = 0; v < n; v++) {
+                // dist[u][v] is the length of the shortest path from u to v using only 0 to i as intermediate vertices
+                // now that we're allowed to also use i, the only new path that could be shorter is u -> i -> v
+
+                // make sure you can use both the vertices before choosing to combine
+                int old = dist[u][v];
+                dist[u][v] = min(dist[u][v], dist[u][k] + dist[k][v]);
+            }
+        }
+
+        ll sum = 0;
+        for (ll u = 0; u < n; u++) {
+            for (ll v = 0; v < n; v++) {
+                if (included[u] && included[v]) {
+                    sum += dist[u][v];
+                }
+            }
+        }
+        vals[i] = sum;
+    }
+        
+}
+
+int main() {
+    cin >> n;
+
+    dist.resize(n, vector<ll>(n));
+    deletions.resize(n);
+    vals.resize(n);
+
+    for (ll i = 0; i < n; i++) {
+        for (ll j = 0; j < n; j++) {
+            cin >> dist[i][j];
+        }
+    }
+
+    for (ll i = 0; i < n; i++) {
+        ll vert;
+        cin >> vert;
+        deletions[i] = (vert - 1);
+    }
+
+    floyd();
+    // floyd2();
+    
+
+    for (ll i = 0; i < n; i++) {
+        cout << vals[i] << " ";
+    }    
+
+    return 0;
+}

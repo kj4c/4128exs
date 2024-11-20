@@ -1,0 +1,79 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+
+using namespace std;
+
+struct Edge {
+    int to, color;
+};
+
+struct State {
+    int node;
+    long long exhaustion;
+    int color_mask;
+    bool operator>(const State &other) const {
+        return exhaustion > other.exhaustion;
+    }
+};
+
+const int N = 10100;
+const int INF = INT_MAX;
+
+vector<Edge> edges[N];
+int elevation[N];
+long long min_exhaustion[N][1 << 6];
+
+int main() {
+    int n, m, k;
+    cin >> n >> m >> k;
+
+    for (int i = 0; i < n; i++) {
+        cin >> elevation[i];
+    }
+
+    for (int i = 0; i < m; i++) {
+        int a, b, c;
+        cin >> a >> b >> c;
+        a--; b--; c--; 
+        edges[a].push_back({b, c});
+        edges[b].push_back({a, c});
+    }
+
+    int target_mask = (1 << k) - 1; 
+    for (int i = 0; i < n; i++) {
+        fill(min_exhaustion[i], min_exhaustion[i] + (1 << k), INF);
+    }
+
+    priority_queue<State, vector<State>, greater<State>> pq;
+    pq.push({0, 0, 0});
+    min_exhaustion[0][0] = 0;
+
+    while (!pq.empty()) {
+        State cur = pq.top();
+        pq.pop();
+
+        if (cur.node == n - 1 && cur.color_mask == target_mask) {
+            cout << cur.exhaustion << endl;
+            return 0;
+        }
+
+        if (cur.exhaustion > min_exhaustion[cur.node][cur.color_mask]) continue;
+
+        for (auto &edge : edges[cur.node]) {
+            int next_node = edge.to;
+            int new_color_mask = cur.color_mask | (1 << edge.color);
+            long long exhaustion_cost = max(0, elevation[next_node] - elevation[cur.node]);
+            long long new_exhaustion = cur.exhaustion + exhaustion_cost;
+
+            if (new_exhaustion < min_exhaustion[next_node][new_color_mask]) {
+                min_exhaustion[next_node][new_color_mask] = new_exhaustion;
+                pq.push({next_node, new_exhaustion, new_color_mask});
+            }
+        }
+    }
+
+    cout << -1 << endl;
+    return 0;
+}

@@ -1,0 +1,163 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <algorithm>
+#include <climits>
+
+using namespace std;
+using ll = long long;
+
+int c, n, m;
+const ll INF = LLONG_MAX;  
+vector<int> costs;
+vector<vector<char>> input;
+
+
+struct FlowNetwork {
+    int n;
+    vector<vector<ll>> adjMat, adjList;
+    vector<int> level, uptochild;
+
+    FlowNetwork(int _n) : n(_n) {
+        adjMat.resize(n, vector<ll>(n, 0));
+        adjList.resize(n);
+        level.resize(n);
+        uptochild.resize(n);
+    }
+
+    void add_edge(int u, int v, ll c) {
+        adjMat[u][v] += c;        
+        adjList[u].push_back(v);
+        adjList[v].push_back(u);
+    }
+
+    void flow_edge(int u, int v, ll c) {
+        adjMat[u][v] -= c;
+        adjMat[v][u] += c;
+    }
+
+    bool bfs(int s, int t) {
+        fill(level.begin(), level.end(), -1);
+        queue<int> q;
+        q.push(s);
+        level[s] = 0;
+        while (!q.empty()) {
+            int u = q.front(); q.pop();
+            uptochild[u] = 0;
+            for (int v : adjList[u])
+                if (adjMat[u][v] > 0 && level[v] == -1) {
+                    level[v] = level[u] + 1;
+                    q.push(v);
+                }
+        }
+        return level[t] != -1;
+    }
+
+    ll augment(int u, int t, ll f) {
+        if (u == t) return f;
+        for (int &i = uptochild[u]; i < adjList[u].size(); i++) {
+            int v = adjList[u][i];
+            if (adjMat[u][v] > 0 && level[v] == level[u] + 1) {
+                ll rf = augment(v, t, min(f, adjMat[u][v]));
+                if (rf > 0) {
+                    flow_edge(u, v, rf);
+                    return rf;
+                }
+            }
+        }
+        level[u] = -1;
+        return 0;
+    }
+
+    ll dinic(int s, int t) {
+        ll res = 0;
+        while (bfs(s, t))
+            for (ll x = augment(s, t, INF); x; x = augment(s, t, INF))
+                res += x;
+        return res;
+    }
+};
+
+ll calcCost(int i, int j) {
+    char cell = input[i][j];
+    if (cell == '.') return INF;
+    if (cell == 'B') return INF;
+    return costs[cell - 'a'];
+}
+
+int main() {
+    // m is row
+    // n is col
+    cin >> n >> m >> c;
+    FlowNetwork network(2*n*m + 2);
+
+    costs.resize(c);
+    input.resize(m, vector(n, '.'));
+
+
+    int bank_node = -1;
+
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            char node;
+            cin >> node;
+            input[i][j] = node;
+            if (node == 'B') {
+                bank_node = i * n + j; 
+            }
+        }
+    }
+
+    for (int i = 0; i < c; i++) {
+        cin >> costs[i];
+    }
+
+    int source = 2 * n * m;
+    int super_sink = source + 1;
+
+    // make the network
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            // cell id
+            int u = i * n + j;
+            ll cost = calcCost(i, j);
+
+            // connect it to an outgoing cell with capacity cost
+            int outgoing = u + (n*m);
+            network.add_edge(u, outgoing, cost);
+
+            // attach outgoing vertex to things around it
+            if (i > 0 && input[i - 1][j]) {
+                network.add_edge(outgoing, (i - 1) * n + j, INF);
+            }
+            if (i < m - 1 && input[i + 1][j]) {
+                network.add_edge(outgoing, (i + 1) * n + j, INF);
+            }
+            if (j > 0 && input[i][j - 1]) {
+                network.add_edge(outgoing, i * n + (j - 1), INF);
+            }
+            if (j < n - 1 && input[i][j + 1]) {
+                network.add_edge(outgoing, i * n + (j + 1), INF);
+            }
+
+            if (u == bank_node) {
+                network.add_edge(source, u, INF);
+            }
+
+            // border cells
+            if (i == 0 || i == m - 1 || j == 0 || j == n - 1) {
+                network.add_edge(outgoing, super_sink, INF);
+            }
+        }
+    }
+
+    ll minCost = network.dinic(source, super_sink);
+
+    if (minCost == INF) {
+        cout << -1 << endl; 
+    } else {
+        cout << minCost << endl;
+    }
+
+    return 0;
+}

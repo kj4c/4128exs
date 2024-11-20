@@ -1,0 +1,103 @@
+#include <vector>
+#include <iostream>
+
+using namespace std;
+typedef long long ll;
+const ll MOD = 1e9 + 7;
+
+// Implementation for square matrices.
+struct Matrix {
+  int n;
+  vector<vector<long long>> v;
+
+  Matrix(int _n) : n(_n) {
+    v.resize(n);
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+        v[i].push_back(0);
+  }
+
+  Matrix operator*(const Matrix &o) const {
+    Matrix res(n);
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+        for (int k = 0; k < n; k++) {
+          res.v[i][j] += v[i][k] * o.v[k][j];
+          res.v[i][j] %= MOD; 
+        }
+    return res;
+  }
+
+  static Matrix getIdentity(int n) {
+    Matrix res(n);
+    for (int i = 0; i < n; i++)
+      res.v[i][i] = 1;
+    return res;
+  }
+  
+  Matrix operator^(long long k) const {
+    Matrix res = Matrix::getIdentity(n);
+    Matrix a = *this;
+    while (k) { // building up in powers of two
+      if (k&1) res = res*a;
+      a = a*a;
+      k /= 2;
+    }
+    return res;
+  }
+};
+
+int main() {
+    ll n, m;
+    cin >> n >> m;
+
+    // quick edge case since can't split any more than n, only one way whichi s all normal boys
+    if (n < m) {
+        cout << 1 << endl;
+        return 0;
+    }
+
+    // recurrence
+    // f(n) = f(n - 1) + f(n - m);
+    // need to make an identity matrix
+    // base values, compute f(i) where i is up till m as the base things
+    // this allows us to use the matrix multiplication 
+    Matrix transition_matrix(m);
+    transition_matrix.v[0][0] = 1; // for f(n - 1)
+    transition_matrix.v[0][m - 1] = 1; // for f(n - m);
+
+
+    // other rows the diagonal
+    for (int i = 1; i < m; i++) {
+        transition_matrix.v[i][i - 1] = 1;
+    }
+
+    // take n - m + 1 steps to reach power of n
+    // S(0) represents f(m - 1) , f(m - 2) ... f(0)
+    // to advance to f(n) from here need to apply the transition matrix
+    // enough times to shift starting value f(m - 1) to position f(n)
+    // which would requre m - 1 + (n - (m - 1)) = n, thats where the steps comes from.
+    Matrix result_matrix = transition_matrix ^ (n - m + 1); // final state it should be in.
+
+    // initial state vector aye
+    vector<ll> state(m, 1);
+    for (int i = 2; i < m; i++) {
+        ll minus_m = i - m;
+        if (i - m < 0) {
+            minus_m = 0;
+        } else {
+            minus_m = state[i - m];
+        }
+        state[i] = (state[i - 1] + minus_m) % MOD;
+    }
+
+    ll final_result = 0;
+    for (int i = 0; i < m; i++) {
+        final_result += result_matrix.v[0][i] * state[i];
+        final_result %= MOD;
+    }
+
+    cout << final_result << endl;
+
+    return 0;
+}

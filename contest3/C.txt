@@ -1,0 +1,143 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 3005;
+
+struct Edge {
+    int u, v, w;
+    bool is_hiding_spot;
+};
+
+bool operator < (const Edge& a, const Edge& b) {
+    if (a.w == b.w) {
+        return !a.is_hiding_spot && b.is_hiding_spot;
+    }
+    return a.w < b.w;
+}
+
+vector<Edge> edges;
+int n, m, hiding_weight, hiding_u, hiding_v;
+vector<pair<int, int>> mst_adj[N]; // Adjacency list for MST
+bool in_cycle[N][N]; // Track edges in the cycle for removal check
+
+// Union-Find Data Structures
+int parent[N], subtree_size[N];
+
+void init_union_find(int n) {
+    for (int i = 1; i <= n; i++) {
+        parent[i] = i;
+        subtree_size[i] = 1;
+    }
+}
+
+int find_root(int x) {
+    if (parent[x] != x) {
+        parent[x] = find_root(parent[x]); // Path compression
+    }
+    return parent[x];
+}
+
+void union_sets(int x, int y) {
+    x = find_root(x);
+    y = find_root(y);
+    if (x != y) {
+        if (subtree_size[x] < subtree_size[y]) {
+            parent[x] = y;
+            subtree_size[y] += subtree_size[x];
+        } else {
+            parent[y] = x;
+            subtree_size[x] += subtree_size[y];
+        }
+    }
+}
+
+// Function to build MST without hiding spot edge
+void build_mst() {
+    init_union_find(n);
+    for (const auto& e : edges) {
+        if (e.is_hiding_spot) continue; // Skip hiding spot edge
+        if (find_root(e.u) != find_root(e.v)) {
+            union_sets(e.u, e.v);
+            mst_adj[e.u].push_back({e.v, e.w});
+            mst_adj[e.v].push_back({e.u, e.w});
+        }
+    }
+}
+
+// DFS to find the cycle created by adding the hiding spot edge
+bool find_cycle(int node, int parent, int target, vector<int>& path, vector<bool>& visited) {
+    visited[node] = true;
+    path.push_back(node);
+
+    if (node == target) return true; // Cycle found
+
+    for (auto [next, weight] : mst_adj[node]) {
+        if (next == parent) continue;
+        if (!visited[next] && find_cycle(next, node, target, path, visited)) {
+            return true;
+        }
+    }
+
+    path.pop_back();
+    return false;
+}
+
+int main() {
+    cin >> n >> m;
+
+    for (int i = 0; i < m; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        Edge e = {u, v, w, i == 0};
+        if (e.is_hiding_spot) {
+            hiding_weight = w;
+            hiding_u = u;
+            hiding_v = v;
+        }
+        edges.push_back(e);
+    }
+
+    // Step 1: Sort edges by weight and build the initial MST
+    sort(edges.begin(), edges.end());
+    build_mst();
+
+    // Step 2: Add the hiding spot edge to the MST, creating a cycle
+    mst_adj[hiding_u].push_back({hiding_v, hiding_weight});
+    mst_adj[hiding_v].push_back({hiding_u, hiding_weight});
+
+    // Step 3: Find the cycle created by adding the hiding spot edge
+    vector<int> cycle;
+    vector<bool> visited(n + 1, false);
+    find_cycle(hiding_u, -1, hiding_v, cycle, visited);
+
+    // Step 4: Identify edges to sabotage within the cycle
+    int sabotage_count = 0;
+    bool removed_from_1 = false;
+    bool removed_from_6 = false;
+
+    for (size_t i = 0; i < cycle.size() - 1; i++) {
+        int u = cycle[i], v = cycle[i + 1];
+        if ((u == hiding_u && v == hiding_v) || (u == hiding_v && v == hiding_u)) continue; // Skip hiding spot
+
+        // Remove an edge connected to 1 if not already removed
+        if (!removed_from_1 && (u == hiding_u || v == hiding_u)) {
+            sabotage_count++;
+            removed_from_1 = true;
+            continue;
+        }
+
+        // Remove an edge connected to 6 if not already removed
+        if (!removed_from_6 && (u == hiding_v || v == hiding_v)) {
+            sabotage_count++;
+            removed_from_6 = true;
+            continue;
+        }
+    }
+
+    cout << sabotage_count << endl;
+
+    return 0;
+}
