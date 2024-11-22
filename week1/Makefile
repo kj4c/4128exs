@@ -6,13 +6,16 @@ CXXFLAGS = -Wall -std=c++17
 SOURCES = $(wildcard *.cpp)
 
 # Create corresponding executables for each .cpp file
-EXECS = $(SOURCES:.cpp=)
+# Add .exe suffix for executables on Windows
+EXE_SUFFIX = .exe
+EXECS = $(SOURCES:.cpp=$(EXE_SUFFIX))
+
 
 # Default target: build all executables
 all: $(EXECS)
 
 # Rule to compile each .cpp file into an executable
-%: %.cpp
+%$(EXE_SUFFIX): %.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 # Clean target to remove all executables

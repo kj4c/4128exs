@@ -4,7 +4,7 @@
 using namespace std;
 
 long long max_prefixes(int n, long long k, const string& s, const string& t) {
-    // We will keep track of the number of distinct strings we have processed
+    // We will keep track of the number of distinct stringse we have processed
     long long num_strings = 0;
 
     // Find the first position where s and t differ
