@@ -8,26 +8,27 @@ using namespace std;
  */
 
 const double EPS = 1e-8;
-typedef pair<double, double> pt;
 typedef long long ll;
-#define x first
-#define y second
 
-struct pointClass {
-    int xx;
-    int yy;
+struct pt {
+    ll x;
+    ll y;
     bool isB;
+
+    bool operator<(const pt& other) const {
+        return x < other.x || (x == other.x && y < other.y);
+    }
 };
 
 pt operator-(pt a, pt b) {
-  return pt(a.x - b.x, a.y - b.y);
+  return pt{a.x - b.x, a.y - b.y, a.isB};
 }
 
 bool zero(double x) {
   return fabs(x) <= EPS;
 }
 
-double cross(pt a, pt b) {
+ll cross(pt a, pt b) {
   return a.x*b.y - a.y*b.x;
 }
 
@@ -35,8 +36,9 @@ double cross(pt a, pt b) {
 // sometimes useful to instead return an int
 // -1, 0 or 1: the sign of the cross product
 bool ccw(pt a, pt b, pt c) {
-  return cross(b - a, c - a) >= 0;
+  return cross(b - a, c - a) > 0;
 }
+
 
 /*
  * convex hull
@@ -75,34 +77,36 @@ int main() {
     cin >> n;
 
     
-    vector<pt> A(n);
     vector<pt> allPoints;
-    vector<bool> isB;
-
 
     for (int i = 0; i < n; i++) {
         ll firstting, secondting;
         cin >> firstting >> secondting;
-        A[i].x = firstting;
-        A[i].y = secondting;
-
-        allPoints.push_back(pt{firstting, secondting});
+        allPoints.push_back(pt{firstting, secondting, false});
     }
 
     int m;
     cin >> m;
 
-    vector<pt> B(n);
 
     for (int i = 0; i < m; i++) {
         ll firstting, secondting;
         cin >> firstting >> secondting;
-        cin >> B[i].x >> B[i].y;
-
-
+        allPoints.push_back(pt{firstting, secondting, true});
     }
 
-    
+    vector<pt> results = convex_hull(allPoints);
+
+    for (int i = 0; i < results.size(); i++) {
+      if (results[i].isB) {
+        cout << "NO";
+        return 0;
+      }
+    }
+
+    // edge case handle later where B is ON the outer edges of the convex hull
+
+    cout << "YES";
 
 
     return 0;
