@@ -61,4 +61,30 @@ such taht it is equal to L.
 This one so hard man
 
 Okay basically, set all the empty weights to have an initial value of 1,
-then we wanna dijkstra to prioritise
+then we wanna dijkstra to prioritise using empty edges before normal edges.
+
+If we find that the shortest path found is < L and you dont use empty weights
+already automatic not possible.
+
+If find that shortest path > L and you use empty weights then its possible.
+
+then now given that path we found is possible, we make every other empty weight
+to be infinity, this limits the future dijkstra problems to not look at them.
+
+Now we just constantly dumping the rest of the remaining weights to one of the empty edges,
+then run dijkstra again, keep dump and run keep dump and run until we reach it.
+
+
+### President's Path
+Find number of roads that lie on all shortest paths from s to t.
+Use floyd warshall to first find the minimum distance for each pair of points
+Then find the number of edges that are coming from u, going into v WHICH CONTRIBUTE to the minimum path.
+This find the number of direct edges that are going into all sinks
+
+Then you find each node that contributes to the shortest path, counting the sum 
+of the inEdges for every node.
+
+Modification on floyd warshall.
+
+
+
