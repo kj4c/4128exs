@@ -2,7 +2,6 @@
 #include <vector>
 #include <queue>
 #include <climits>
-#include <cstring>
 
 using namespace std;
 
@@ -12,30 +11,36 @@ const ll INF = LLONG_MAX;
 
 struct Edge {
     int to, rev;
-    ll cap, flow;
+    ll cap;
 };
 
 struct FlowNetwork {
     int n;
     vector<vector<Edge>> adjList;
     vector<int> level, uptochild;
-    vector<bool> mark;
+    vector<int> col; 
+    // 0: unvisited, 1: visited in dfs1, 2: visited in dfs2
+    int arr[3]; 
+    // arr[1]: count of nodes visited in dfs1, arr[2]: in dfs2
 
     FlowNetwork(int _n) : n(_n) {
         adjList.resize(n);
         level.resize(n);
         uptochild.resize(n);
-        mark.resize(n, false);
+        col.resize(n, 0);
+        arr[1] = arr[2] = 0;
     }
 
     void add_edge(int u, int v, ll c) {
-        adjList[u].push_back({v, (int)adjList[v].size(), c, 0});
-        adjList[v].push_back({u, (int)adjList[u].size() - 1, c, 0}); 
+        Edge uv = {v, (int)adjList[v].size(), c};
+        Edge vu = {u, (int)adjList[u].size(), 0};
+        adjList[u].push_back(uv);
+        adjList[v].push_back(vu);
     }
 
-    void flow_edge(Edge& e, ll c) {
-        e.flow += c;
-        adjList[e.to][e.rev].flow -= c;
+    void add_undirected_edge(int u, int v, ll c) {
+        add_edge(u, v, c);
+        add_edge(v, u, c);
     }
 
     bool bfs(int s, int t) {
@@ -48,7 +53,7 @@ struct FlowNetwork {
             q.pop();
             uptochild[u] = 0;
             for (auto& e : adjList[u]) {
-                if (e.cap > e.flow && level[e.to] == -1) {
+                if (e.cap > 0 && level[e.to] == -1) {
                     level[e.to] = level[u] + 1;
                     q.push(e.to);
                 }
@@ -57,14 +62,15 @@ struct FlowNetwork {
         return level[t] != -1;
     }
 
-    ll augment(int u, int t, ll f) {
+    ll dfs(int u, int t, ll f) {
         if (u == t) return f;
         for (int& i = uptochild[u]; i < adjList[u].size(); i++) {
             Edge& e = adjList[u][i];
-            if (e.cap > e.flow && level[e.to] == level[u] + 1) {
-                ll rf = augment(e.to, t, min(f, e.cap - e.flow));
+            if (e.cap > 0 && level[e.to] == level[u] + 1) {
+                ll rf = dfs(e.to, t, min(f, e.cap));
                 if (rf > 0) {
-                    flow_edge(e, rf);
+                    e.cap -= rf;
+                    adjList[e.to][e.rev].cap += rf;
                     return rf;
                 }
             }
@@ -75,46 +81,47 @@ struct FlowNetwork {
     ll dinic(int s, int t) {
         ll res = 0;
         while (bfs(s, t)) {
-            for (ll x = augment(s, t, INF); x; x = augment(s, t, INF))
+            fill(uptochild.begin(), uptochild.end(), 0);
+            while (ll x = dfs(s, t, INF)) {
                 res += x;
+            }
         }
         return res;
     }
 
-    void dfs_norm(int now) {
-        mark[now] = true;
+    void dfs1(int now) {
+        col[now] = 1;
+        arr[1]++;
         for (auto& e : adjList[now]) {
-            if (!mark[e.to] && e.cap > e.flow) { 
-                dfs_norm(e.to);
+            if (e.cap > 0 && col[e.to] == 0) {
+                dfs1(e.to);
             }
         }
     }
 
-    void dfs_residual(int now) {
-        mark[now] = true;
+    void dfs2(int now) {
+        col[now] = 2;
+        arr[2]++;
         for (auto& e : adjList[now]) {
             Edge& rev = adjList[e.to][e.rev];
-            if (!mark[e.to] && rev.cap - rev.flow > 0) {
-                dfs_residual(e.to);
+            if (rev.cap > 0 && col[e.to] == 0) {
+                dfs2(e.to);
             }
         }
     }
 
     string check_uniqueness(int s, int t) {
-        fill(mark.begin(), mark.end(), false);
+        fill(col.begin(), col.end(), 0);
+        arr[1] = arr[2] = 0;
 
-        dfs_norm(s);
-        dfs_residual(t);
+        dfs1(s);
+        dfs2(t);
 
-        for (int i = 0; i < n; i++) {
-            // means that node unreachablefrom both
-            // source n sink so mult solutions
-            if (!mark[i]) {
-                return "AMBIGUOUS";
-            }
+        if (arr[1] + arr[2] == n) {
+            return "UNIQUE";
+        } else {
+            return "AMBIGUOUS";
         }
-
-        return "UNIQUE";
     }
 };
 
@@ -128,10 +135,11 @@ int main() {
         int u, v;
         ll c;
         cin >> u >> v >> c;
-        network.add_edge(u - 1, v - 1, c);
+        u--; v--;
+        network.add_undirected_edge(u, v, c);
     }
 
-    network.dinic(a - 1, b - 1); 
+    network.dinic(a - 1, b - 1);
 
     cout << network.check_uniqueness(a - 1, b - 1) << endl;
 
